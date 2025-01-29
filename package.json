@@ -3,8 +3,8 @@
     "version": "1.0.0",
     "scripts": {
         "build": "tsc",
-        "start": "node dist/bot.js",
-        "dev": "ts-node src/bot.ts",
+        "start": "ts-node src/bot.ts",
+        "dev": "npx tsx src/bot.ts",
         "deploy": "hardhat run scripts/deploy.ts --network sepolia"
     },
     "dependencies": {
