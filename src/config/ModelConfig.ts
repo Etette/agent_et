@@ -80,5 +80,6 @@ export const AI_CONFIG = {
 export const ERROR_MESSAGES = {
     DEFAULT: "I apologize, but I couldn't generate a response. Please try again.",
     API_ERROR: "Sorry, I encountered an error while processing your question. Please try again later.",
-    EMPTY_QUESTION: "Please provide a question about blockchain or crypto."
+    EMPTY_QUESTION: "Please provide a question about blockchain or crypto.",
+    ADDRESS_ERROR: 'Sorry, there was an error fetching your address. Please try again later.'
 };

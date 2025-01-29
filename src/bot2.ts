@@ -3,8 +3,9 @@ import { message } from 'telegraf/filters';
 import { WalletManager } from './lib/WalletManager';
 import { PriceManager } from './lib/PriceManager';
 import { ContractManager } from './lib/ContractManager';
-import { AIAgent } from '../src/lib/AgentManager';
+import { AIAgent } from './lib/AgentManager';
 import dotenv from 'dotenv';
+import express from 'express';
 dotenv.config();
 
 // Initialize bot and managers
@@ -13,6 +14,15 @@ const walletManager = new WalletManager();
 const priceManager = new PriceManager();
 const contractManager = new ContractManager();
 const aiAgent = new AIAgent();
+
+// Create Express app
+const app = express();
+app.use(express.json());
+
+// Webhook settings
+const WEBHOOK_DOMAIN = process.env.WEBHOOK_URL || '';
+const PORT = process.env.PORT || 80;
+const WEBHOOK_PATH = `/webhook/${process.env.TELEGRAM_BOT_TOKEN}`;
 
 // Start command
 web3Sumaria.start(async (ctx) => await ctx.reply(
@@ -209,11 +219,48 @@ web3Sumaria.catch((err: any, ctx: Context) => {
   console.error(`Error for ${ctx.updateType}:`, err);
 });
 
-// Start bot
-web3Sumaria.launch().then(() => {
-  console.log('Web3Sumaria is running...');
-})
+// // Start bot
+// web3Sumaria.launch().then(() => {
+//   console.log('Web3Sumaria is running...');
+// })
 
+// Set webhook instead of using polling
+async function setupWebhook() {
+    try {
+      // Set the webhook
+      const webhookUrl = `${WEBHOOK_DOMAIN}${WEBHOOK_PATH}`;
+      await web3Sumaria.telegram.setWebhook(webhookUrl);
+      console.log(`Webhook set to: ${webhookUrl}`);
+  
+      // Set up the webhook endpoint
+      app.post(WEBHOOK_PATH, (req, res) => {
+        web3Sumaria.handleUpdate(req.body, res);
+      });
+  
+      // Optional health check endpoint
+      app.get('/health', (req, res) => {
+        res.send('Bot is running!');
+      });
+  
+      // Start the server
+      app.listen(PORT, () => {
+        console.log(`Server is running on port ${PORT}`);
+      });
+    } catch (error) {
+      console.error('Error setting webhook:', error);
+      process.exit(1);
+    }
+}
+  
+// Start the webhook server
+setupWebhook().catch(console.error);
+  
 // Enable graceful stop
-process.once('SIGINT', () => web3Sumaria.stop('SIGINT'));
-process.once('SIGTERM', () => web3Sumaria.stop('SIGTERM'));
+process.once('SIGINT', async () => {
+    await web3Sumaria.telegram.deleteWebhook();
+    process.exit(0);
+});
+process.once('SIGTERM', async () => {
+    await web3Sumaria.telegram.deleteWebhook();
+    process.exit(0);
+});
