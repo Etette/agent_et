@@ -1,0 +1,26 @@
+{
+    "name": "telegram-crypto-bot",
+    "version": "1.0.0",
+    "scripts": {
+        "build": "tsc",
+        "start": "node dist/bot.js",
+        "dev": "ts-node src/bot.ts",
+        "deploy": "hardhat run scripts/deploy.ts --network sepolia"
+    },
+    "dependencies": {
+        "@google/generative-ai": "^0.21.0",
+        "@openzeppelin/contracts": "^5.2.0",
+        "dotenv": "^16.3.1",
+        "ethers": "^6.9.0",
+        "node-cache": "^5.1.2",
+        "telegraf": "^4.15.3",
+        "tsx": "^4.19.2"
+    },
+    "devDependencies": {
+        "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+        "@types/node-fetch": "^2.6.12",
+        "hardhat": "^2.22.18",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.7.3"
+    }
+}
