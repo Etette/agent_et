@@ -3,6 +3,14 @@ const { ethers } = require('ethers');
 const fs = require('fs');
 const path = require('path');
 
+export interface WalletData {
+  address: string;
+  privateKey: string;
+  username: string;
+  createdAt: string;
+}
+
+
 export class WalletManager {
     private readonly walletFile: string;
     private readonly encryptionKey: string;

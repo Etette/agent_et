@@ -1,5 +1,5 @@
 import { ethers } from 'ethers';
-import { WalletData } from './WalletManagerdeprecated';
+import { WalletData } from './WalletManager';
 
 export class ContractManager {
   private provider: ethers.Provider;
