@@ -13,7 +13,7 @@ export const CypherX = {
       throw new Error('Encryption key must be 32 bytes (64 hex characters)');
     }
 
-    // Generate random IV and create buffer
+    // random Initialization Vector and buffer
     const iv = crypto.randomBytes(16);
     const cipher = crypto.createCipheriv(
       'aes-256-gcm',
@@ -24,7 +24,7 @@ export const CypherX = {
     let encrypted = cipher.update(text, 'utf8', 'hex');
     encrypted += cipher.final('hex');
 
-    // Get auth tag for authentication
+    // auth tag for authentication
     const authTag = cipher.getAuthTag();
     return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`;
   },
@@ -41,7 +41,7 @@ export const CypherX = {
     }
 
     try {
-      // Split the encrypted text into components
+      // Split encrypted text into components
       const [ivHex, authTagHex, encryptedHex] = encryptedText.split(':');
 
       if (!ivHex || !authTagHex || !encryptedHex) {
@@ -82,25 +82,5 @@ export const CypherX = {
     return crypto.randomBytes(32).toString('hex');
   }
 };
-
-
-// function testEncryption() {
-//   const key = CypherX.generateKey();
-//   const text = 'Hello, Woold!';
-  
-//   console.log('Original text:', text);
-//   console.log('Key:', key);
-  
-//   const encrypted = CypherX.encrypt(text, key);
-//   console.log('Encrypted:', encrypted);
-  
-//   const decrypted = CypherX.decrypt(encrypted, key);
-//   console.log('Decrypted:', decrypted);
-  
-//   console.log('Test passed:', text === decrypted);
-// }
-
-
-// testEncryption();
 
 export default CypherX;
