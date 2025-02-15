@@ -3,10 +3,10 @@
     "version": "1.0.0",
     "scripts": {
         "build": "tsc",
-        "start": "node dist/sumarai.js",
-        "dev": "nodemon src/sumarai.ts",
+        "start": "node dist/index.js",
+        "dev": "nodemon src/index.ts",
         "deploy": "hardhat run scripts/deploy.ts --network sepolia",
-        "serve": "node dist/sumarai.js"
+        "serve": "node dist/index.js"
     },
     "dependencies": {
         "@google/generative-ai": "^0.21.0",

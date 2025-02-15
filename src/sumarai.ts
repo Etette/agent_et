@@ -9,7 +9,7 @@ import { AgentSamurai } from './lib/samuraiW3/Agent_Manager';
 import { AgentET } from './lib/agentEt/AgentManager';
 dotenv.config();
 
-class SamuraiW3Bot {
+export class OnchainSamurai {
     private bot: Telegraf;
     private walletManager: SamuraiWalletManager;
     private priceManager: PriceManager;
@@ -35,12 +35,24 @@ class SamuraiW3Bot {
         this.setupMessageHandlers();
     }
 
+    public async handleUpdate(update: any): Promise<void> {
+        await this.bot.handleUpdate(update);
+    }
+
+    public async setWebhook(url: string): Promise<any> {
+        return this.bot.telegram.setWebhook(url);
+    }
+
+    public async getWebhookInfo(): Promise<any> {
+        return this.bot.telegram.getWebhookInfo();
+    }
+
     private setupCommands() {
         // Start command with combined welcome message
         this.bot.command('start', async (ctx) => {
             try {
                 await ctx.reply(
-                    'Hi Welcome, I am SamuraiW3Bot! 🚀\n\n' +
+                    'Hi Welcome, I am OnchainSamurai! 🚀\n\n' +
                     'Available commands:\n' +
                     '/createwallet - Create a new Ethereum wallet\n' +
                     '/importwallet - import existing Ethereum wallet. \nN/B: Private Key required\n' +
@@ -665,16 +677,11 @@ class SamuraiW3Bot {
             
             // Connect to MongoDB through WalletManager
             await this.walletManager.connect();
-            console.log('Successfully connected to MongoDB');
-            
-            // // Initialize other managers if needed
-            // await this.priceManager.initialize();
-            // await this.contractManager.initialize();
-            // await this.samuraiAI.initialize();
-            
+            console.log('Successfully connected to MongoDB');           
             // Start the bot
-            console.log('Starting SamuraiW3Bot...');
+            console.log('Starting OnchainSamurai...');
             await this.bot.launch();
+            console.log('OnchainSamurai started successfully');
             
             
             // Enable graceful stop
@@ -689,52 +696,15 @@ class SamuraiW3Bot {
     public async stop() {
         try {
             // Stop the bot
-            this.bot.stop('Bot stopping...');
+            this.bot.stop('stopping OnchainSamurai...');
             
             // Close all manager connections
             await this.walletManager.close();
-            // await this.priceManager.close();
-            // await this.contractManager.close();
-            // await this.samuraiAI.close();
             
-            console.log('Bot stopped successfully');
+            console.log('OnchainSamurai stopped successfully');
         } catch (error) {
             console.error('Error during shutdown:', error);
             throw error;
         }
     }
 }
-
-// Initialize and start the bot with error handling
-const main = async () => {
-    const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN2;
-    if (!BOT_TOKEN) {
-        throw new Error('TELEGRAM_BOT_TOKEN must be provided in environment variables!');
-    }
-
-    try {
-        const bot = new SamuraiW3Bot(BOT_TOKEN);
-        await bot.start();
-        console.log('Bot is running...');
-    } catch (error) {
-        console.error('Fatal error starting bot:', error);
-        process.exit(1);
-    }
-};
-
-// Handle uncaught errors
-process.on('uncaughtException', (error) => {
-    console.error('Uncaught Exception:', error);
-    process.exit(1);
-});
-
-process.on('unhandledRejection', (error) => {
-    console.error('Unhandled Rejection:', error);
-    process.exit(1);
-});
-
-// Start the application
-main().catch(error => {
-    console.error('Failed to start application:', error);
-    process.exit(1);
-});
