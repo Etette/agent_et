@@ -1,5 +1,5 @@
 import express from 'express';
-import { OnchainSamurai } from './sumarai';
+import { OnchainWiki } from './onchainWiki';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -7,10 +7,9 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 4000;
 
-// Parse JSON bodies for webhook requests
 app.use(express.json());
 
-// Initialize and start the bot with webhook
+
 const startBot = async () => {
     const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN2;
     const WEBHOOK_DOMAIN = process.env.WEBHOOK_DOMAIN;
@@ -24,7 +23,7 @@ const startBot = async () => {
     }
 
     try {
-        const bot = new OnchainSamurai(BOT_TOKEN);
+        const bot = new OnchainWiki(BOT_TOKEN);
         
         // Set up the webhook endpoint
         app.post(WEBHOOK_PATH, async (req, res) => {

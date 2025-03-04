@@ -2,7 +2,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Context } from 'telegraf';
 import { AI_CONFIG, ERROR_MESSAGES } from '../../config/ModelConfig';
 
-export class AgentET {
+export class AgentManger {
   private genAI: GoogleGenerativeAI;
   private model: any;
   

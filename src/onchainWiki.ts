@@ -1,34 +1,34 @@
 import { Telegraf, Context } from 'telegraf';
 import { message } from 'telegraf/filters';
 import { PriceManager } from './lib/PriceManager';
-import { WalletData, SupportedToken } from './lib/utils/types';
+import { WalletData, SupportedToken, TEST_SupportedToken } from './lib/utils/types';
 import dotenv from 'dotenv';
-import { SamuraiWalletManager } from './lib/samuraiW3/Wallet_Manager';
-import { SamuraiContractManager} from './lib/samuraiW3/Contract_Manager';
-import { AgentSamurai } from './lib/samuraiW3/Agent_Manager';
-import { AgentET } from './lib/agentEt/AgentManager';
+import { OnchainWikiWalletManager } from './lib/onchainWiki/wallet/Wallet_Manager';
+import { OnchainWikiContractManager} from './lib/onchainWiki/contract/Contract_Manager';
+// import { AgentSamurai } from './lib/samuraiW3/Agent_Manager';
+import { AgentManger } from './lib/agentEt/AgentManager';
 dotenv.config();
 
-export class OnchainSamurai {
-    private bot: Telegraf;
-    private walletManager: SamuraiWalletManager;
+export class OnchainWiki {
+    private onchainwiki: Telegraf;
+    private walletManager: OnchainWikiWalletManager;
     private priceManager: PriceManager;
-    private contractManager: SamuraiContractManager;
-    private samuraiAI: AgentET; //AgentSamurai;
+    private contractManager: OnchainWikiContractManager;
+    private samuraiAI: AgentManger; //AgentSamurai;
     private activeUserSessions: Map<number, {
         state: string;
         data: any;
     }>;
 
-    constructor(botToken: string) {
-        this.bot = new Telegraf(botToken, {
+    constructor(onchainwikiToken: string) {
+        this.onchainwiki = new Telegraf(onchainwikiToken, {
             handlerTimeout: 90000,
         });
         
-        this.walletManager = new SamuraiWalletManager();
+        this.walletManager = new OnchainWikiWalletManager();
         this.priceManager = new PriceManager();
-        this.contractManager = new SamuraiContractManager();
-        this.samuraiAI = new AgentET();
+        this.contractManager = new OnchainWikiContractManager();
+        this.samuraiAI = new AgentManger();
         this.activeUserSessions = new Map();
 
         this.setupCommands();
@@ -36,37 +36,38 @@ export class OnchainSamurai {
     }
 
     public async handleUpdate(update: any): Promise<void> {
-        await this.bot.handleUpdate(update);
+        await this.onchainwiki.handleUpdate(update);
     }
 
     public async setWebhook(url: string): Promise<any> {
-        return this.bot.telegram.setWebhook(url);
+        return this.onchainwiki.telegram.setWebhook(url);
     }
 
     public async getWebhookInfo(): Promise<any> {
-        return this.bot.telegram.getWebhookInfo();
+        return this.onchainwiki.telegram.getWebhookInfo();
     }
 
     private setupCommands() {
         // Start command with combined welcome message
-        this.bot.command('start', async (ctx) => {
+        this.onchainwiki.command('start', async (ctx) => {
             try {
                 await ctx.reply(
-                    'Hi Welcome, I am OnchainSamurai! 🚀\n\n' +
+                    'Hi Welcome, I am OnchainWiki! 🚀\n\n' +
                     'Available commands:\n' +
                     '/createwallet - Create a new Ethereum wallet\n' +
                     '/importwallet - import existing Ethereum wallet. \nN/B: Private Key required\n' +
                     '/info - View your wallet information \n' +
-                    '/send <amount> <token> to <address> - Send tokens to your pal \n' +
+                    // '/send <amount> <token> to <address> - Send tokens to your pal \n' +
+                    // '/pal - verify user is onchain \n' +
                     '/price <token name> - Get token price \n' +
                     '/assets - Check your crypto portfolio \n' +
                     '/asset [token] - Check specific token balance \n' +
                     // '/allwallets - View all wallets summary\n' +
                     // '/updateusername - Update wallet username\n' +
                     // '/deletewallet - Delete your wallet\n' +
-                    '/ask <question> - Ask anything about blockchain/crypto\n\n' +
-                    'Supported tokens: USDT, LSK, WBTC\n\n' +
-                    'You can also just ask Samurai_W3 your blockchain/crypto questions directly!'
+                    'Current supported tokens: USDT, LSK, NGN \n\n' +
+                    'Ask me any blockchain/crypto related questions as chat!\n' +
+                    '\nPowered By: EmCLickzLabs'
                 );
             } catch (error) {
                 console.error('Error in start command:', error);
@@ -75,20 +76,21 @@ export class OnchainSamurai {
         });
 
         // Create wallet command
-        this.bot.command('createwallet', async (ctx) => {
+        this.onchainwiki.command('createwallet', async (ctx) => {
             try {
                 const username = ctx.from.username || '';
-                if (!username) {
+                const user_id = ctx.from.id.toString();
+                if (!user_id) {
                     return ctx.reply('Please set a Telegram username first!');
                 }
 
-                const existingWallet = await this.walletManager.getUserSummary(username);
+                const existingWallet = await this.walletManager.getUserSummary(user_id);
                 if (existingWallet) {
                     return ctx.reply(`${username} already has a wallet!\nAddress: ${existingWallet.address}`);
                 }
 
                 await ctx.reply('Creating wallet...');
-                const wallet = await this.walletManager.createWallet(username);
+                const wallet = await this.walletManager.createWallet(user_id.toString(), username);
                 
                 await ctx.reply(
                     '✅ Wallet created successfully!\n\n' +
@@ -102,7 +104,7 @@ export class OnchainSamurai {
             }
         });
 
-        this.bot.command('importwallet', async (ctx) => {
+        this.onchainwiki.command('importwallet', async (ctx) => {
             try {
                 const userId = ctx.from?.id;
                 const username = ctx.from?.username;
@@ -133,14 +135,14 @@ export class OnchainSamurai {
             }
         });
 
-        this.bot.command('info', async (ctx) => {
+        this.onchainwiki.command('info', async (ctx) => {
             try {
-                const username = ctx.from?.username;
-                if (!username) {
+                const user = ctx.from?.id.toString();
+                if (!user) {
                     return ctx.reply('Please set a Telegram username first!');
                 }
 
-                const wallet = await this.walletManager.getUserSummary(username);
+                const wallet = await this.walletManager.getUserSummary(user);
                 if (!wallet) {
                     return ctx.reply('Please create a wallet first using /createwallet');
                 }
@@ -175,7 +177,7 @@ export class OnchainSamurai {
         });
 
         // Send tokens command
-    this.bot.command('send', async (ctx) => {
+    this.onchainwiki.command('send', async (ctx) => {
         try {
             const username = ctx.from?.username || '';
             if (!username) {
@@ -245,7 +247,7 @@ export class OnchainSamurai {
     });
 
         // Price command
-        this.bot.command('price', async (ctx) => {
+        this.onchainwiki.command('price', async (ctx) => {
             try {
                 const symbol = ctx.message.text.split(' ')[1]?.toLowerCase();
                 if (!symbol) {
@@ -291,14 +293,14 @@ export class OnchainSamurai {
 
     private setupBalanceCommands() {
         // Check all assets balance
-        this.bot.command('assets', async (ctx) => {
+        this.onchainwiki.command('assets', async (ctx) => {
             try {
-                const username = ctx.from?.username || '';
-                if (!username) {
+                const user = ctx.from?.id.toString();
+                if (!user) {
                     return ctx.reply('Please set a Telegram username first!');
                 }
 
-                const wallet = await this.walletManager.getUserSummary(username);
+                const wallet = await this.walletManager.getUserSummary(user);
                 if (!wallet) {
                     return ctx.reply('Please create a wallet first using /createwallet');
                 }
@@ -310,26 +312,23 @@ export class OnchainSamurai {
                     status.chat.id,
                     status.message_id,
                     undefined,
-                    `💼 ${ctx.from?.first_name} ${ctx.from?.last_name} Wallet Portfolio:\n\nASSETS: \nETH: ${balance.eth} \n${balance.tokens.join('\n')}\nPowered By: EmCLickzLabs`
+                    `💼 ${ctx.from?.first_name} ${ctx.from?.last_name} Onchain Portfolio:\n\nASSETS: \nETH: ${balance.eth} \n${balance.tokens.join('\n')}\nPowered By: EmCLickzLabs`
                 );
             } catch (error) {
                 console.error('Error in balance check:', error);
                 await ctx.reply('An error occurred while checking your balance. Please try again later.');
             } 
-            // finally {
-            //     await this.walletManager.close();
-            // }
         });
 
         // Check token balance
-        this.bot.command('asset', async (ctx) => {
+        this.onchainwiki.command('asset', async (ctx) => {
             try {
-                const username = ctx.from?.username || '';
-                if (!username) {
+                const user = ctx.from?.id.toString();
+                if (!user) {
                     return ctx.reply('Please set a Telegram username first!');
                 }
 
-                const wallet = await this.walletManager.getUserSummary(username);
+                const wallet = await this.walletManager.getUserSummary(user);
                 if (!wallet) {
                     return ctx.reply('Please create a wallet first using /createwallet');
                 }
@@ -340,7 +339,7 @@ export class OnchainSamurai {
 
                 const result = await this.contractManager.getBatchTokenBalances(
                     wallet.address,
-                    requestedTokens.length ? requestedTokens as SupportedToken[] : undefined
+                    requestedTokens.length ? requestedTokens as TEST_SupportedToken[] : undefined
                 );
 
                 const formattedBalances = this.formatBalanceResult(result);
@@ -360,7 +359,7 @@ export class OnchainSamurai {
         });
 
         // View all wallets
-        this.bot.command('allwallets', async (ctx) => {
+        this.onchainwiki.command('allwallets', async (ctx) => {
             try {
                 const wallets = await this.walletManager.getWalletSummary();
                 if (wallets.length === 0) {
@@ -387,7 +386,7 @@ export class OnchainSamurai {
 
     private setupWalletManagementCommands() {
         // Update username
-        this.bot.command('updateusername', async (ctx) => {
+        this.onchainwiki.command('updateusername', async (ctx) => {
             try {
                 const userId = ctx.from?.id;
                 if (!userId) return;
@@ -407,7 +406,7 @@ export class OnchainSamurai {
         });
 
         // Delete wallet
-        this.bot.command('deletewallet', async (ctx) => {
+        this.onchainwiki.command('deletewallet', async (ctx) => {
             try {
                 const userId = ctx.from?.id;
                 if (!userId) return;
@@ -429,7 +428,7 @@ export class OnchainSamurai {
 
     private setupAICommands() {
         // AI question command
-        this.bot.command('ask', async (ctx) => {
+        this.onchainwiki.command('ask', async (ctx) => {
             const question = ctx.message.text.split('/ask ')[1];
             if (!question) {
                 return ctx.reply('Usage: /ask <your question>');
@@ -439,7 +438,7 @@ export class OnchainSamurai {
     }
 
     private setupMessageHandlers() {
-        this.bot.on(message('text'), async (ctx) => {
+        this.onchainwiki.on(message('text'), async (ctx) => {
             try {
                 const userId = ctx.from?.id;
                 if (!userId) return;
@@ -457,15 +456,15 @@ export class OnchainSamurai {
                 }
 
                 switch (userSession.state) {
-                    case 'AWAITING_CURRENT_USERNAME':
-                        userSession.data.currentUsername = text;
-                        userSession.state = 'AWAITING_NEW_USERNAME';
-                        await ctx.reply('Please enter your new username:');
-                        break;
+                    // case 'AWAITING_CURRENT_USERNAME':
+                    //     userSession.data.currentUsername = text;
+                    //     userSession.state = 'AWAITING_NEW_USERNAME';
+                    //     await ctx.reply('Please enter your new username:');
+                    //     break;
 
-                    case 'AWAITING_NEW_USERNAME':
-                        await this.handleUsernameUpdate(ctx, userSession);
-                        break;
+                    // case 'AWAITING_NEW_USERNAME':
+                    //     await this.handleUsernameUpdate(ctx, userSession);
+                    //     break;
 
                     case 'AWAITING_USERNAME_FOR_DELETE':
                         await this.handleWalletDeletion(ctx, userSession);
@@ -492,32 +491,32 @@ export class OnchainSamurai {
         });
     }
 
-    private async handleUsernameUpdate(ctx: Context, session: any) {
-        try {
-            const newUsername = (ctx.message as any).text;
-            await this.walletManager.updateWalletUsername(
-                session.data.currentUsername,
-                newUsername
-            );
+    // private async handleUsernameUpdate(ctx: Context, session: any) {
+    //     try {
+    //         const newUsername = (ctx.message as any).text;
+    //         await this.walletManager.updateWalletUsername(
+    //             session.data.currentUsername,
+    //             newUsername
+    //         );
 
-            await ctx.reply(
-                '✅ Username updated successfully!\n\n' +
-                `New username: ${newUsername}` +
-                `\nPowered By: EmCLickzLabs`
-            );
+    //         await ctx.reply(
+    //             '✅ Username updated successfully!\n\n' +
+    //             `New username: ${newUsername}` +
+    //             `\nPowered By: EmCLickzLabs`
+    //         );
             
-            if (ctx.from) {
-                this.activeUserSessions.delete(ctx.from.id);
-            }
-        } catch (error) {
-            console.error('Error in username update:', error);
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            await ctx.reply(`Error updating username: ${errorMessage}`);
-        }
+    //         if (ctx.from) {
+    //             this.activeUserSessions.delete(ctx.from.id);
+    //         }
+    //     } catch (error) {
+    //         console.error('Error in username update:', error);
+    //         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    //         await ctx.reply(`Error updating username: ${errorMessage}`);
+    //     }
         // finally {
         //     await this.walletManager.close();
         // }
-    }
+    // }
 
     private async handleWalletDeletion(ctx: Context, session: any) {
         try {
@@ -527,7 +526,7 @@ export class OnchainSamurai {
                 return;
             }
 
-            await this.walletManager.deleteWallet(username);
+            // await this.walletManager.deleteWallet(username);
             await ctx.reply('✅ Wallet deleted successfully! \n`\nPowered By: EmCLickzLabs`');
             
             if (ctx.from) {
@@ -545,10 +544,10 @@ export class OnchainSamurai {
 
     private async handlePrivateKeyImport(ctx: Context, privateKey: string) {
         try {
-            const userId = ctx.from?.id;
+            const user_id = ctx.from?.id || null;
             const username = ctx.from?.username;
             
-            if (!userId || !username) {
+            if (!user_id || !username) {
                 return ctx.reply('Please set a Telegram username first!');
             }
     
@@ -568,10 +567,10 @@ export class OnchainSamurai {
     
                 if (addresses.length === 1) {
                     // If only one address, import it directly
-                    await this.importWalletWithAddress(ctx, username, privateKey, addresses[0]);
+                    await this.importWalletWithAddress(ctx, username, user_id.toString(), privateKey, addresses[0]);
                 } else {
                     // If multiple addresses, let user choose
-                    this.activeUserSessions.set(userId, {
+                    this.activeUserSessions.set(user_id, {
                         state: 'CHOOSING_ADDRESS',
                         data: {
                             privateKey,
@@ -620,7 +619,7 @@ export class OnchainSamurai {
             }
     
             const selectedAddress = session.data.addresses[index];
-            await this.importWalletWithAddress(ctx, username, session.data.privateKey, selectedAddress);
+            await this.importWalletWithAddress(ctx, username, userId.toString(), session.data.privateKey, selectedAddress);
             
         } catch (error) {
             console.error('Error in address choice:', error);
@@ -649,17 +648,18 @@ export class OnchainSamurai {
             ...formattedBalances,
             '\n',
             `Total Value: $${result.totalValueUSD}`,
-            `\nLast Updated: ${new Date(result.timestamp).toLocaleString()}`,
+            `\nTimestamp: ${new Date(result.timestamp).toLocaleString()}`,
             `\nPowered By: EmCLickzLabs`
         ].join('\n');
     }
     private async importWalletWithAddress(
         ctx: Context, 
-        username: string, 
+        username: string,
+        user_id: string,
         privateKey: string, 
         address: string
     ) {
-        const wallet = await this.walletManager.importExisitingWallet(username, privateKey, address);
+        const wallet = await this.walletManager.importExisitingWallet(username, user_id, privateKey, address);
         
         await ctx.reply(
             '✅ Wallet imported successfully!\n\n' +
@@ -672,36 +672,36 @@ export class OnchainSamurai {
     public async start() {
         try {
             // Test connection before starting
-            await this.bot.telegram.getMe();
+            await this.onchainwiki.telegram.getMe();
             console.log('Successfully connected to Telegram API');
             
             // Connect to MongoDB through WalletManager
             await this.walletManager.connect();
             console.log('Successfully connected to MongoDB');           
-            // Start the bot
-            console.log('Starting OnchainSamurai...');
-            await this.bot.launch();
-            console.log('OnchainSamurai started successfully');
+            // Start the onchainwiki
+            console.log('Starting OnchainWiki...');
+            await this.onchainwiki.launch();
+            console.log('OnchainWiki started successfully');
             
             
             // Enable graceful stop
             process.once('SIGINT', () => this.stop());
             process.once('SIGTERM', () => this.stop());
         } catch (error) {
-            console.error('Failed to start bot:', error);
+            console.error('Failed to start onchainwiki:', error);
             throw error;
         }
     }
 
     public async stop() {
         try {
-            // Stop the bot
-            this.bot.stop('stopping OnchainSamurai...');
+            // Stop the onchainwiki
+            this.onchainwiki.stop('stopping OnchainWiki...');
             
             // Close all manager connections
             await this.walletManager.close();
             
-            console.log('OnchainSamurai stopped successfully');
+            console.log('OnchainWiki stopped successfully');
         } catch (error) {
             console.error('Error during shutdown:', error);
             throw error;

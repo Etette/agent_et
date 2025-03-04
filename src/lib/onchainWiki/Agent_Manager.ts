@@ -4,7 +4,7 @@ import { AI_CONFIG, ERROR_MESSAGES } from '../../config/ModelConfig';
 import dotenv from 'dotenv';
 dotenv.config();
 
-export class AgentSamurai {
+export class OnchainWikiAgentManager {
   private openai: OpenAI;
   
   constructor() {

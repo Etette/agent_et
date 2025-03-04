@@ -7,8 +7,9 @@
         "moduleResolution": "nodenext",
         "strict": true,
         "esModuleInterop": true,
+        "resolveJsonModule": true,
         "skipLibCheck": true
     },
-    "include": ["src/**/*.ts"],
-    "exclude": ["node_modules"]
+    "include": ["src/**/*.ts", "src/contract/ignition/modules/bindDeploy.js", "./scripts", "src/lib/onchainWiki/contract/SmartAccount.ts"],
+    "exclude": ["node_modules"],
 }

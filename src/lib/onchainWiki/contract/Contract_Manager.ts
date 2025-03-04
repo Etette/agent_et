@@ -1,8 +1,8 @@
 import { Contract, ethers } from 'ethers';
 import axios from 'axios';
-import { SupportedToken, WalletData } from '../utils/types';
+import { TEST_SupportedToken, WalletData } from '../../utils/types';
 import dotenv from 'dotenv';
-import { ERROR_MESSAGES } from '../../config/ModelConfig';
+import { ERROR_MESSAGES } from '../../../config/ModelConfig';
 dotenv.config();
 
 const ERC20_ABI = [
@@ -11,25 +11,22 @@ const ERC20_ABI = [
     "function symbol() view returns (string)"
 ];
 
-export class SamuraiContractManager {
+export class OnchainWikiContractManager {
     private provider: ethers.JsonRpcProvider;
-    private tokenContracts: Map<SupportedToken, Contract>;
-    private tokenAddresses: Record<SupportedToken, string>;
+    private tokenContracts: Map<TEST_SupportedToken, Contract>;
+    private tokenAddresses: Record<TEST_SupportedToken, string>;
     private initialized: boolean = false;
 
     constructor() {
-        // Validate RPC URL first
-        const rpcUrl = process.env.LISK_RPC;
+        const rpcUrl = process.env.LISK_RPC_TESTNET;
         if (!rpcUrl) {
             throw new Error(ERROR_MESSAGES.RPC_URL_ERROR);
         }
         this.provider = new ethers.JsonRpcProvider(rpcUrl);
-        
-        // Validate token addresses
         const addresses = {
-            USDT: process.env.LISK_USDT,
-            LSK: process.env.LISK_LSK,
-            // WBTC: process.env.LISK_WBTC
+            USDT: process.env.Test_USDT,
+            LSK: process.env.Test_LSK,
+            NGN: process.env.Test_NGN
         };
 
         // Check for missing addresses
@@ -42,7 +39,7 @@ export class SamuraiContractManager {
             }
         });
 
-        this.tokenAddresses = addresses as Record<SupportedToken, string>;
+        this.tokenAddresses = addresses as Record<TEST_SupportedToken, string>;
         this.tokenContracts = new Map();
     }
 
@@ -68,11 +65,11 @@ export class SamuraiContractManager {
                     throw new Error(`Failed to validate contract for ${token} at ${address}`);
                 }
 
-                this.tokenContracts.set(token as SupportedToken, contract);
+                this.tokenContracts.set(token as TEST_SupportedToken, contract);
             }
             
             this.initialized = true;
-            console.log('Samurai initialized initialized with addresses:', 
+            console.log('OnchainWiki initialized with addresses:', 
                 Object.entries(this.tokenAddresses)
                     .map(([token, addr]) => `${token}: ${addr}`)
                     .join(', ')
@@ -90,7 +87,7 @@ export class SamuraiContractManager {
         }
     }
 
-    async getTokenBalance(token: SupportedToken, address: string): Promise<string> {
+    async getTokenBalance(token: TEST_SupportedToken, address: string): Promise<string> {
         await this.ensureInitialized();
 
         if (!ethers.isAddress(address)) {
@@ -112,35 +109,42 @@ export class SamuraiContractManager {
         }
     }
 
-    async getTokenPriceUSD(token: SupportedToken): Promise<number> {
-        const coinGeckoIds: Record<SupportedToken, string> = {
+    async getTokenPriceUSD(token: TEST_SupportedToken): Promise<number> {
+        const coinGeckoIds: Record<TEST_SupportedToken, string> = {
             USDT: 'tether',
             LSK: 'lisk',
-            // WBTC: 'wrappedbtc'
+            NGN: 'naira'
         };
 
         const id = coinGeckoIds[token];
         if (!id) {
             throw new Error(`No price feed configured for ${token}`);
         }
+        let retries = 0;
+        const maxRetries = 2;
+        while (retries <= maxRetries) {
+            try {
+                const response = await axios.get(
+                    `https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd`,
+                    { timeout: 5000 } // 5 second timeout
+                );
 
-        try {
-            const response = await axios.get(
-                `https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd`,
-                { timeout: 5000 } // 5 second timeout
-            );
+                if (!response.data?.[id]?.usd) {
+                    throw new Error('Price data not available');
+                }
 
-            if (!response.data?.[id]?.usd) {
-                throw new Error('Price data not available');
+                return response.data[id].usd;
+            } catch (error) {
+                if (axios.isAxiosError(error)) {
+                    retries++;
+                    if (retries > maxRetries) {
+                        throw new Error(`Failed to fetch ${token} price: ${error.message}`);
+                    }
+                }
             }
-
-            return response.data[id].usd;
-        } catch (error) {
-            if (axios.isAxiosError(error)) {
-                throw new Error(`Failed to fetch ${token} price: ${error.message}`);
-            }
-            throw error;
         }
+        return 0;
+       
     }
 
     async getEthBalance(address: string) {
@@ -160,7 +164,7 @@ export class SamuraiContractManager {
 
     async transferToken(
         wallet: WalletData,
-        token: SupportedToken,
+        token: TEST_SupportedToken,
         recipientAddress: string,
         amount: string
     ): Promise<ethers.ContractTransaction> {
@@ -211,6 +215,7 @@ export class SamuraiContractManager {
                 recipientAddress,
                 parsedAmount
             );
+            
             
             // Get current gas price
             const gasPrice = await this.provider.getFeeData();
@@ -275,7 +280,7 @@ export class SamuraiContractManager {
             throw new Error(`Failed to transfer ETH: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
-    async getSingleTokenBalance(address: string, token: SupportedToken) {
+    async getSingleTokenBalance(address: string, token: TEST_SupportedToken) {
         try {
             const [balance, price] = await Promise.all([
                 this.getTokenBalance(token, address),
@@ -301,14 +306,14 @@ export class SamuraiContractManager {
         }
     }
 
-    async getBatchTokenBalances(address: string, tokens?: SupportedToken[]) {
+    async getBatchTokenBalances(address: string, tokens?: TEST_SupportedToken[]) {
         await this.ensureInitialized();
 
         if (!ethers.isAddress(address)) {
             throw new Error(ERROR_MESSAGES.INVALID_TOKEN_ADDRESS + address);
         }
 
-        const tokensToCheck = tokens || Object.keys(this.tokenAddresses) as SupportedToken[];
+        const tokensToCheck = tokens || Object.keys(this.tokenAddresses) as TEST_SupportedToken[];
         
         try {
             const balances = await Promise.all(
@@ -358,7 +363,7 @@ export class SamuraiContractManager {
 
     async close() {
         try {
-            await this.provider.destroy();
+            this.provider.destroy();
             this.initialized = false;
             this.tokenContracts.clear();
         } catch (error) {

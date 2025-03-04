@@ -1,13 +1,14 @@
-import { ERROR_MESSAGES } from "../../config/ModelConfig";
-import CypherX from "../utils/Encryption";
-import { WalletData } from "../utils/types";
+import { ERROR_MESSAGES } from "../../../config/ModelConfig";
+import CypherX from "../../utils/Encryption";
+import { WalletData } from "../../utils/types";
 import { WalletService } from "./WalletService";
 import fs from 'fs';
 import { ethers } from 'ethers';
 import path from 'path';
+import {OnchainWikiSmartAccount} from "../contract/SmartAccount"
 
 
-export class SamuraiWalletManager {
+export class OnchainWikiWalletManager {
     private readonly walletFile: string;
     private readonly encryptionKey: string;
     private Service: WalletService;
@@ -16,7 +17,6 @@ export class SamuraiWalletManager {
         this.walletFile = path.join(process.cwd(), 'data', 'wallets.enc');
         this.encryptionKey = process.env.WALLET_ENCRYPTION_KEY || '';
         this.ensureDataDirectory();
-        
         this.Service = new WalletService(this.encryptionKey);
     }
 
@@ -32,22 +32,35 @@ export class SamuraiWalletManager {
         }
     }
 
-    async createWallet(username: string) {
+    async createWallet(user_id: string, username: string) {
        try {
-        const existingWallet = await this.Service.getUser(username);
-        if (existingWallet?.address) {
+        const onchainUser = await OnchainWikiSmartAccount.userExists(user_id);
+        console.log(`create wallet user check successfull`);
+        const existingWallet = await this.Service.getUser(user_id);
+        if (existingWallet?.address || onchainUser) {
             return ERROR_MESSAGES.WALLET_CREATED;
         }
-        const wallet = await ethers.Wallet.createRandom();
+        const wallet = ethers.Wallet.createRandom();
+        if(!wallet) {
+            return ERROR_MESSAGES.WALLET_ERROR;
+        }
         const walletData: WalletData = {
             address: wallet.address,
             privateKey: wallet.privateKey,
+            user_id,
             username,
             createdAt: new Date().toISOString()
         };
+        console.log(`wallet created: address: ${wallet.address} \n pp: ${wallet.privateKey}`)
+        console.log(`binding wallet onchain...`)
+
+        const onchainWallet = await OnchainWikiSmartAccount.bindUserToWallet(walletData);
+        if(!onchainWallet) {
+            return ERROR_MESSAGES.WALLET_ERROR;
+        }
+        console.log(`successfully bind wallet onchain...`)
 
         await this.saveWallet(walletData);
-        // link username to wallet - update smart contract mapping
         return walletData;
         
        } catch (error) {
@@ -70,20 +83,21 @@ export class SamuraiWalletManager {
 
         const encryptedData = CypherX.encrypt(JSON.stringify(existingWallets), this.encryptionKey);
         fs.writeFileSync(this.walletFile, encryptedData);
+        // uploaad file to storage here
     }
 
-    async getWallet(username: string) {
+    async getWallet(user: string) {
         // Try MongoDB first
-        const wallet = await this.Service.getWallet(username);
+        const wallet = await this.Service.getWallet(user);
         if (wallet) return wallet;
 
         // Fallback to file
         const wallets = await this.getAllWallets();
-        return wallets.find((w: any) => w.username === username) || null;
+        return wallets.find((w: any) => w.user === user) || null;
     }
 
-    async getUserSummary(username: string) {
-        const wallet = await this.getWallet(username);
+    async getUserSummary(user: string) {
+        const wallet = await this.getWallet(user);
         if (wallet) {
             return {
                 address: wallet.address,
@@ -153,95 +167,31 @@ export class SamuraiWalletManager {
         }
     }
 
-    async deleteWallet(username: string) {
-        try {
-            // Delete from MongoDB
-            const deleted = await this.Service.deleteWallet(username);
-            
-            if (!deleted) {
-                throw new Error(ERROR_MESSAGES.WALLET_NOT_FOUND);
-            }
-
-            // Update file backup
-            let wallets = await this.getAllWallets();
-            wallets = wallets.filter((w: any) => w.username !== username);
-            
-            const encryptedData = CypherX.encrypt(JSON.stringify(wallets), this.encryptionKey);
-            fs.writeFileSync(this.walletFile, encryptedData);
-            
-            return true;
-        } catch (error) {
-            console.error('Delete wallet error:', error);
-            throw error;
-        }
-    }
-
-    async updateWalletUsername(username: string, newUsername: string) {
-        try {
-            const wallet: WalletData = await this.getWallet(username);
-
-            if (!wallet) {
-                throw new Error(ERROR_MESSAGES.WALLET_NOT_FOUND);
-            }
-
-            // Verify the private key
-            const walletInstance = new ethers.Wallet(wallet.privateKey);
-            const verificationText = "verify_private_key";
-            const signature = await walletInstance.signMessage(verificationText);
-
-            const recoveredAddress = ethers.verifyMessage(verificationText, signature);
-            if (recoveredAddress !== wallet.address) {
-                throw new Error(ERROR_MESSAGES.INVALID_PRIVATE_KEY);
-            }
-
-            // Update in MongoDB
-            await this.Service.updateWalletUsername(username, newUsername);
-            // link new username to wallet  - update smart contract mapping
-
-            // Update file backup
-            const wallets = await this.getAllWallets();
-            const walletToUpdate = wallets.find((w: any) => w.username === username);
-            if (walletToUpdate) {
-                walletToUpdate.username = newUsername;
-                const encryptedData = CypherX.encrypt(JSON.stringify(wallets), this.encryptionKey);
-                fs.writeFileSync(this.walletFile, encryptedData);
-            }
-
-            return { ...wallet, username: newUsername };
-        } catch (error) {
-            console.error('Error updating wallet username:', error);
-            throw error;
-        }
-    }
-
     async getAddressesFromPrivateKey(privateKey: string): Promise<string[]> {
         try {
-            // Create wallet instance from private key
             const wallet = new ethers.Wallet(privateKey);
-        
-            // For now, we'll just return the main address
-            // You can extend this to return multiple addresses if needed
             return [wallet.address];
         } catch (error) {
             console.error('Error getting addresses from private key:', error);
-            throw new Error('Invalid private key');
+            throw new Error(ERROR_MESSAGES.INVALID_PRIVATE_KEY);
         }
     }
 
     async importExisitingWallet(
         username: string,
+        user_id: string,
         privateKey: string,
         address: string
     ): Promise<WalletData> {
     try {
-        // Validate the private key and address match
         const wallet = new ethers.Wallet(privateKey);
         if (wallet.address.toLowerCase() !== address.toLowerCase()) {
-            throw new Error('Private key does not match the selected address');
+            throw new Error(ERROR_MESSAGES.INVALID_PRIVATE_KEY);
         }
 
         const walletData: WalletData = {
             username,
+            user_id,
             address: wallet.address,
             privateKey: privateKey,
             createdAt: new Date().toString()

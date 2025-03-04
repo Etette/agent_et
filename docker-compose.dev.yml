@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev  # Use a separate Dockerfile for development
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app  # Mount the current directory for hot-reloading
+    environment:
+      - NODE_ENV=development
+    command: npm run dev  # Run the app in dev mode

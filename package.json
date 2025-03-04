@@ -1,16 +1,19 @@
 {
-    "name": "telegram-crypto-bot",
+    "name": "onchain-wiki",
     "version": "1.0.0",
     "scripts": {
         "build": "tsc",
         "start": "node dist/index.js",
-        "dev": "nodemon src/index.ts",
+        "dev": "nodemon dist/testt.js",
         "deploy": "hardhat run scripts/deploy.ts --network sepolia",
         "serve": "node dist/index.js"
     },
     "dependencies": {
+        "@biconomy/abstractjs": "^0.0.39",
+        "axios": "^1.6.7",
         "@google/generative-ai": "^0.21.0",
         "@openzeppelin/contracts": "^5.2.0",
+        "@rhinestone/module-sdk": "^0.2.3",
         "@types/mongoose": "^5.11.96",
         "dotenv": "^16.3.1",
         "ethers": "^6.9.0",
@@ -21,7 +24,8 @@
         "node-cache": "^5.1.2",
         "openai": "^4.82.0",
         "telegraf": "^4.15.3",
-        "tsx": "^4.19.2"
+        "tsx": "^4.19.2",
+        "viem": "^2.23.2"
     },
     "devDependencies": {
         "@nomicfoundation/hardhat-toolbox": "^4.0.0",
@@ -33,5 +37,6 @@
         "nodemon": "^3.1.9",
         "ts-node": "^10.9.2",
         "typescript": "^5.7.3"
-    }
+    },
+    "packageManager": "pnpm@9.15.4+sha512.b2dc20e2fc72b3e18848459b37359a32064663e5627a51e4c74b2c29dd8e8e0491483c3abb40789cfd578bf362fb6ba8261b05f0387d76792ed6e23ea3b1b6a0"
 }

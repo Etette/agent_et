@@ -24,12 +24,13 @@ export interface WalletData {
     address: string;
     privateKey: string;
     username: string;
+    user_id: string;
     createdAt: string;
 }
   
   
 export interface TokenBalance {
-    symbol: SupportedToken;
+    symbol: TEST_SupportedToken;
     balance: string;
     valueUSD?: string;
     error?: string;
@@ -45,7 +46,7 @@ export interface BatchBalanceResult {
 export interface TokenConfig {
     address: string;
     decimals: number;
-    symbol: SupportedToken;
+    symbol: TEST_SupportedToken;
 }
   
 export const TOKEN_CONFIGS: Record<SupportedToken, TokenConfig> = {
@@ -64,4 +65,36 @@ export const TOKEN_CONFIGS: Record<SupportedToken, TokenConfig> = {
 //       decimals: 18,
 //       symbol: 'WBTC'
 //     }
+};
+
+export enum TEST_SupportedTokenString {
+  USDT = 'tether',
+  LSK = 'lisk',
+  NGN = 'naira',
+}
+
+export interface TEST_TokenConfig {
+  address: string;
+  decimals: number;
+  symbol: TEST_SupportedToken;
+}
+
+export type TEST_SupportedToken = keyof typeof TEST_SupportedTokenString;
+
+export const TEST_TOKEN_CONFIGS: Record<TEST_SupportedToken, TEST_TokenConfig> = {
+  USDT: {
+    address: process.env.Test_USDT || '', 
+    decimals: 6,
+    symbol: 'USDT'
+  },
+  LSK: {
+    address: process.env.Test_LSK || '', 
+    decimals: 18,
+    symbol: 'LSK'
+  },
+    NGN: {
+      address: process.env.Test_NGN || '',
+      decimals: 6,
+      symbol: 'NGN'
+    }
 };

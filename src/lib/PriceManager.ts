@@ -1,5 +1,4 @@
 import NodeCache from 'node-cache';
-import fetch from 'node-fetch';
 import axios from 'axios';
 
 export class PriceManager {
