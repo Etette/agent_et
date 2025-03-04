@@ -1,21 +1,21 @@
-# Web3Sumarai Bot 🤖
+# OnchainWiki 🤖
 
-A Telegram bot that combines wallet management, cryptocurrency price tracking, and an AI-powered blockchain education assistant.
+A Telegram bot that combines wallet management, cryptocurrency price tracking and an AI-powered blockchain education assistant.
 
 ## Features
 
 - **Wallet Management**
-  - Create Ethereum wallets from telegram username
+  - Create Ethereum wallets from telegram ID
+  - Receive crypto assets
   - Check balances
   - Send tokens and NFTs
-  - View wallet addresses
-  - Update wallet to new telegram username
+  - View wallet portfolio
 
 - **Price Tracking**
   - Get real-time cryptocurrency prices
   - Support for multiple tokens
 
-- **Web3Sumarai Education Assistant**
+- **OnchainWiki Education Assistant**
   - Blockchain and cryptocurrency explanations
   - Technical guidance for developers
   - Web3 resources for begineers and experts
@@ -32,8 +32,8 @@ A Telegram bot that combines wallet management, cryptocurrency price tracking, a
 - `/price <name>` - Get token price from name of token
 - `/balance` - Check your wallet balance
 - `/address` - Get your wallet address
-- `/ask <question>` - Ask Web3Sumarai about blockchain.
-- Direct messages are also handled by Web3Sumarai
+- `/ask <question>` - Ask OnchainWiki about blockchain.
+- Direct messages are also handled by OnchainWiki
 
 ## Setup
 
