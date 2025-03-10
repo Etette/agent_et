@@ -1,7 +1,7 @@
 import { ethers } from "ethers";
 import * as dotenv from "dotenv";
-import artifacts from "../../contract/artifacts/contracts/OnchainWiki.sol/OnchainWiki.json";
-import { WalletData } from "../utils/types";
+import artifacts from "../../../contract/artifacts/contracts/bindWallet.sol/WalletBinding.json";
+import { WalletData } from "../../utils/types";
 dotenv.config();
 
 const BINDER_CONTRACT_ADDRESS = process.env.BINDER_CONTRACT_ADDRESS as string; 
@@ -30,17 +30,16 @@ export class OnchainWikiContractService {
   public static async bindUsernameToWallet(walletData: WalletData): Promise<Boolean> {
     const contract = OnchainWikiContractService.getContract(walletData);
     const signer = OnchainWikiContractService.getSigner(walletData);
-    const signerAddress = await this.getSigner(walletData).getAddress();
-    const tx = await contract.bindUserToWallet(walletData.username, signerAddress);
+    const tx = await contract.bindUserToWallet(walletData.user_id, signer);
     await tx.wait();
     console.log("Wallet bound to username:", walletData.username);
     return true;
    
   }
 
-  /**
-   * Updates the username on-chain from the current one (in walletData) to a new one.
-   */
+  // /**
+  //  * Updates the username on-chain from the current one (in walletData) to a new one.
+  //  */
   public static async updateUsername(walletData: WalletData, newUsername: string): Promise<Boolean> {
     const contract = OnchainWikiContractService.getContract(walletData);
     const tx = await contract.updateUsername(walletData.username, newUsername); // prev username potential error
@@ -54,7 +53,8 @@ export class OnchainWikiContractService {
    */
   public static async unbindUsernameFromWallet(walletData: WalletData): Promise<Boolean> {
     const contract = OnchainWikiContractService.getContract(walletData);
-    const tx = await contract.deleteWalletBinding(walletData.username);
+    const signerAddress = await this.getSigner(walletData).getAddress();
+    const tx = await contract.deleteWalletBinding(walletData.user_id, signerAddress);
     await tx.wait();
     console.log("Wallet binding deleted for username:", walletData.username);
     return true
